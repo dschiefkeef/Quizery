@@ -681,7 +681,7 @@ function showResult(q, correctAnswer, scores) {
 
   const isCorrect = myChoice === correctAnswer;
   const newScore = scores?.[playerId]?.score ?? myScore;
-  const gained = Math.max(0, newScore - myScore); // always positive or zero
+const gained = scores?.[playerId]?.ptsGained ?? 0;
   myScore = newScore;
   // Update streak from server scores
   const newStreak = scores?.[playerId]?.streak ?? (isCorrect ? myStreak + 1 : 0);
@@ -689,7 +689,7 @@ function showResult(q, correctAnswer, scores) {
 
   document.getElementById('res-icon').textContent = isCorrect ? '✅' : '❌';
   document.getElementById('res-msg').textContent = isCorrect ? 'CORRECT!' : 'WRONG';
-  document.getElementById('res-pts').textContent = (gained > 0 ? '+' : '') + gained + ' pts' + (isCorrect && myStreak > 1 ? ' 🔥x' + myStreak : '');
+document.getElementById('res-pts').textContent = (isCorrect ? '+' + gained : '0') + ' pts' + (isCorrect && myStreak > 1 ? ' 🔥x' + myStreak : '');
 
   if (isCorrect) playCorrectSound();
   else playWrongSound();
