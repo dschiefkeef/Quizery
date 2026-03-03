@@ -897,7 +897,7 @@ function revealAnswer() {
     }
 
     // Update streak
-    players[pid].streak = correct ? prevStreak + 1 : 0;
+    players[pid].ptsGained = (players[pid].score || 0) - prev;
 
     gameRef.child('players/' + pid).update({
       score: players[pid].score || 0,
@@ -907,7 +907,7 @@ function revealAnswer() {
 
   const scores = {};
   Object.entries(players).forEach(([pid, p]) => {
-    scores[pid] = { name: p.name, score: p.score || 0, streak: p.streak || 0, avatarUrl: p.avatarUrl || null };
+scores[pid] = { name: p.name, score: p.score || 0, streak: p.streak || 0, ptsGained: p.ptsGained || 0, avatarUrl: p.avatarUrl || null };
   });
   gameRef.update({ status: 'revealed', correctAnswer: q.correct, scores });
 
@@ -940,7 +940,7 @@ function showFinalResults() {
   sortedFinal = Object.values(players).sort((a, b) => (b.score || 0) - (a.score || 0));
   const scores = {};
   Object.entries(players).forEach(([pid, p]) => {
-    scores[pid] = { name: p.name, score: p.score || 0, streak: p.streak || 0, avatarUrl: p.avatarUrl || null };
+scores[pid] = { name: p.name, score: p.score || 0, streak: p.streak || 0, ptsGained: p.ptsGained || 0, avatarUrl: p.avatarUrl || null };
   });
   gameRef.update({ status: 'results_pending', scores });
 
@@ -982,7 +982,7 @@ function revealLosers() {
   const bottom3 = sortedFinal.slice(-3).map(p => p.name);
   const scores = {};
   Object.entries(players).forEach(([pid, p]) => {
-    scores[pid] = { name: p.name, score: p.score || 0, streak: p.streak || 0, avatarUrl: p.avatarUrl || null };
+scores[pid] = { name: p.name, score: p.score || 0, streak: p.streak || 0, ptsGained: p.ptsGained || 0, avatarUrl: p.avatarUrl || null };
   });
   gameRef.update({ status: 'results_losers', bottom3: JSON.stringify(bottom3), scores });
 
