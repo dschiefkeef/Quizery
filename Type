@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Cognitive Trainer</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --panel: #1e1e1e;
+            --accent: #bb86fc;
+            --near-miss: #ff9800;
+            --piss-off: #f44336;
+            --success: #4caf50;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel {
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        button {
+            background-color: var(--accent);
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+        .hidden { display: none !important; }
+        #color-display {
+            width: 100%;
+            height: 200px;
+            border-radius: 10px;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        .slider-group { margin: 10px 0; }
+        input[type=range] { width: 80%; }
+        #score-board { font-size: 1.2em; font-weight: bold; }
+        
+        /* Hard Mode Flash */
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+        .flash-hard { animation: flash 0.1s infinite; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="panel">
+        <h1>Cognitive Color Matcher</h1>
+        <div id="score-board">Puntos: <span id="score">0</span></div>
+        <div id="multiplier-display">Mult: 1.0x</div>
+    </div>
+
+    <!-- Screen 1: Settings -->
+    <div id="settings-screen" class="panel">
+        <h3>Modo de Juego</h3>
+        <button onclick="startGame('normal')">Normal</button>
+        <button onclick="startGame('hard')">Difícil (Flashes)</button>
+        <label>
+            <input type="checkbox" id="confidence-bet"> 
+            Activar Confidence Bet (1.05x / 0.95x)
+        </label>
+    </div>
+
+    <!-- Screen 2: Simon Says -->
+    <div id="simon-screen" class="panel hidden">
+        <h2 id="simon-title">Simon Says...</h2>
+        <div id="simon-colors" style="display: flex; justify-content: center; gap: 10px;">
+            <div id="c1" class="color-box" style="width:50px; height:50px; border-radius:50%; background:red"></div>
+            <div id="c2" class="color-box" style="width:50px; height:50px; border-radius:50%; background:blue"></div>
+            <div id="c3" class="color-box" style="width:50px; height:50px; border-radius:50%; background:yellow"></div>
+        </div>
+        <p>Tiempo: <span id="timer">5</span>s</p>
+    </div>
+
+    <!-- Screen 3: Challenge -->
+    <div id="challenge-screen" class="panel hidden">
+        <h2>Recrea el Color</h2>
+        <div id="target-color-display" style="width: 100%; height: 100px; border-radius: 10px;"></div>
+        <div class="slider-group">
+            <label>H: <input type="range" id="hue" min="0" max="360"></label><br>
+            <label>S: <input type="range" id="sat" min="0" max="100"></label><br>
+            <label>L: <input type="range" id="light" min="0" max="100"></label>
+        </div>
+        <div id="user-color-display" style="width: 100%; height: 50px; border-radius: 10px; border: 2px solid white;"></div>
+        <button onclick="checkMatch()">Finalizar</button>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let multiplier = 1.0;
+    let targetColor = {h:0, s:0, l:0};
+    let currentMode = 'normal';
+    let simonSequence = [];
+    let gameInterval;
+
+    function startGame(mode) {
+        currentMode = mode;
+        document.getElementById('settings-screen').classList.add('hidden');
+        nextRound();
+    }
+
+    function nextRound() {
+        document.getElementById('challenge-screen').classList.add('hidden');
+        document.getElementById('simon-screen').classList.remove('hidden');
+        
+        // Simular progresión Simon Says (1-3 colores)
+        const numColors = Math.min(3, Math.floor(score/100) + 1);
+        simonSequence = Array.from({length: numColors}, () => 
+            `hsl(${Math.random()*360}, ${Math.random()*100}%, ${Math.random()*100}%)`
+        );
+        
+        let i = 0;
+        let time = 5 - (currentMode === 'hard' ? 1 : 0);
+        document.getElementById('timer').innerText = time;
+        
+        // Mostrar secuencia (simplificado)
+        const display = document.getElementById('simon-title');
+        display.innerText = "Memoriza: " + simonSequence.join(' -> ');
+        
+        // Esperar y pasar al reto
+        setTimeout(() => {
+            showChallenge();
+        }, 3000);
+    }
+
+    function showChallenge() {
+        document.getElementById('simon-screen').classList.add('hidden');
+        document.getElementById('challenge-screen').classList.remove('hidden');
+        
+        targetColor = {
+            h: Math.floor(Math.random() * 360),
+            s: Math.floor(Math.random() * 100),
+            l: Math.floor(Math.random() * 80) + 10 // Evitar negro/blanco puro
+        };
+        
+        document.getElementById('target-color-display').style.backgroundColor = 
+            `hsl(${targetColor.h}, ${targetColor.s}%, ${targetColor.l}%)`;
+        
+        if (currentMode === 'hard') {
+            document.body.classList.add('flash-hard');
+        } else {
+            document.body.classList.remove('flash-hard');
+        }
+    }
+
+    // Actualizar color de usuario en tiempo real
+    ['hue', 'sat', 'light'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            const h = document.getElementById('hue').value;
+            const s = document.getElementById('sat').value;
+            const l = document.getElementById('light').value;
+            document.getElementById('user-color-display').style.backgroundColor = `hsl(${h}, ${s}%, ${l}%)`;
+        });
+    });
+
+    function checkMatch() {
+        document.body.classList.remove('flash-hard');
+        const h = document.getElementById('hue').value;
+        const s = document.getElementById('sat').value;
+        const l = document.getElementById('light').value;
+        
+        // Cálculo de diferencia (psicología: la saturación importa más)
+        const diffH = Math.abs(h - targetColor.h);
+        const diffS = Math.abs(s - targetColor.s);
+        const diffL = Math.abs(l - targetColor.l);
+        const totalDiff = (diffH/2) + diffS + diffL;
+        
+        let roundScore = 0;
+        if (totalDiff < 10) {
+            roundScore = 100;
+            alert("¡Perfecto!");
+        } else if (totalDiff < 30) {
+            roundScore = 50;
+            alert("Near Miss - Casi!");
+        } else {
+            roundScore = 0;
+            alert("Piss Off - Muy lejos");
+        }
+        
+        // Confidence Bet
+        if (document.getElementById('confidence-bet').checked) {
+            if (roundScore === 100) roundScore *= 1.05;
+            else if (roundScore === 0) roundScore *= 0.95; // Penalización
+        }
+        
+        score += Math.round(roundScore);
+        document.getElementById('score').innerText = score;
+        nextRound();
+    }
+</script>
+
+</body>
+</html>
